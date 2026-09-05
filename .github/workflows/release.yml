@@ -1,36 +1,20 @@
-name: Universal Release Builder
+name: Release
 
 on:
-  # Trigger dari mana saja
-  workflow_dispatch:        # Manual dari GitHub
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  release:
-    types: [ published ]
-  schedule:
-    - cron: '0 0 * * 0'    # Setiap minggu
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: false
+        default: 'latest'
 
 jobs:
   build:
-    name: Build All Platforms
+    name: Build Release
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
     
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Get version
-        id: version
-        run: |
-          if [ -f pubspec.yaml ]; then
-            VERSION=$(grep 'version:' pubspec.yaml | awk '{print $2}')
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "version=1.0.0" >> $GITHUB_OUTPUT
-          fi
       
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -49,76 +33,20 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
       
-      - name: Build App Bundle
-        run: flutter build appbundle --release
-      
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
       
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: build/app/outputs/bundle/release/app-release.aab
-
-  deploy:
-    name: Deploy to Platforms
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'release'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: app-release
-          path: dist/
-      
-      - name: Create GitHub Release
-        if: github.event_name == 'push'
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.build.outputs.version }}
-          files: dist/*
+          tag_name: ${{ github.event.inputs.tag || 'v1.0.0' }}
+          files: build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Upload to Firebase
-        if: github.event_name == 'push'
-        run: |
-          npm install -g firebase-tools
-          firebase appdistribution:distribute dist/app-release.apk \
-            --app ${{ secrets.FIREBASE_APP_ID }} \
-            --token ${{ secrets.FIREBASE_TOKEN }} \
-            --groups testers
-      
-      - name: Upload to Google Play (Internal)
-        if: github.event_name == 'release'
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJson: ${{ secrets.PLAY_STORE_JSON }}
-          packageName: com.your.app
-          releaseFiles: dist/app-release.aab
-          track: internal
-          status: draft
-
-  notify:
-    name: Send Notification
-    needs: [build, deploy]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-      - name: Send to Telegram
-        if: always()
-        uses: appleboy/telegram-action@master
-        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
