@@ -1,4 +1,4 @@
-`name: Web2APK
+name: Web2APK
 
 on:
   workflow_dispatch:
@@ -32,9 +32,9 @@ jobs:
 
       - name: Create Flutter Project
         run: |
-          APP_NAME="\${{ github.event.inputs.app_name }}"
-          PKG=\$(echo "\$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | tr -cd '[:alnum:]_')
-          flutter create --org com.webapk --project-name "\$PKG" myapp
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          PKG=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '_' | tr -cd '[:alnum:]_')
+          flutter create --org com.webapk --project-name "$PKG" myapp
 
       - name: Add Assets and Dependencies
         run: |
@@ -47,8 +47,8 @@ jobs:
 
       - name: Write main.dart
         run: |
-          APP_NAME="\${{ github.event.inputs.app_name }}"
-          WEB_URL="\${{ github.event.inputs.web_url }}"
+          APP_NAME="${{ github.event.inputs.app_name }}"
+          WEB_URL="${{ github.event.inputs.web_url }}"
 
           cat > myapp/lib/main.dart << 'DART'
           import 'package:flutter/material.dart';
@@ -71,7 +71,7 @@ jobs:
             @override
             Widget build(BuildContext context) {
               return MaterialApp(
-                title: '\$APP_NAME',
+                title: '$APP_NAME',
                 debugShowCheckedModeBanner: false,
                 theme: ThemeData(useMaterial3: true, primarySwatch: Colors.blue),
                 home: const SplashScreen(),
@@ -166,7 +166,7 @@ jobs:
 
             @override
             Widget build(BuildContext context) {
-              return Scaffold(body: Center(child: Text('\$APP_NAME', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold))));
+              return Scaffold(body: Center(child: Text('$APP_NAME', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold))));
             }
           }
 
@@ -183,7 +183,7 @@ jobs:
               super.initState();
               _controller = WebViewController()
                 ..setJavaScriptMode(JavaScriptMode.unrestricted)
-                ..loadRequest(Uri.parse('\$WEB_URL'));
+                ..loadRequest(Uri.parse('$WEB_URL'));
             }
             @override
             Widget build(BuildContext context) {
@@ -192,25 +192,25 @@ jobs:
           }
           DART
 
-          sed -i "s#\\\$APP_NAME#\$APP_NAME#g" myapp/lib/main.dart
-          sed -i "s#\\\$WEB_URL#\$WEB_URL#g" myapp/lib/main.dart
+          sed -i "s#\$APP_NAME#$APP_NAME#g" myapp/lib/main.dart
+          sed -i "s#\$WEB_URL#$WEB_URL#g" myapp/lib/main.dart
 
       - name: Fix Android Permissions
         run: |
-          APP_NAME="\${{ github.event.inputs.app_name }}"
+          APP_NAME="${{ github.event.inputs.app_name }}"
           MANIFEST="myapp/android/app/src/main/AndroidManifest.xml"
-          sed -i '/<manifest xmlns:android/a\\    <uses-permission android:name="android.permission.INTERNET"\\/>' \$MANIFEST
-          sed -i '/<manifest xmlns:android/a\\    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\\/>' \$MANIFEST
-          sed -i "s/android:label=\\"[^\\"]*\\"/android:label=\\"\$APP_NAME\\"/" \$MANIFEST
+          sed -i '/<manifest xmlns:android/a\    <uses-permission android:name="android.permission.INTERNET"\/>' $MANIFEST
+          sed -i '/<manifest xmlns:android/a\    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"\/>' $MANIFEST
+          sed -i "s/android:label=\"[^\"]*\"/android:label=\"$APP_NAME\"/" $MANIFEST
 
       - name: Download Icon
         run: |
           mkdir -p myapp/assets/icon
           sudo apt-get install -y imagemagick
-          curl -L \\
-            -H "Authorization: Bearer \${{ secrets.GITHUB_TOKEN }}" \\
-            -H "Accept: application/octet-stream" \\
-            "\${{ github.event.inputs.icon_url }}" \\
+          curl -L \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/octet-stream" \
+            "${{ github.event.inputs.icon_url }}" \
             -o myapp/assets/icon/icon_raw
           convert myapp/assets/icon/icon_raw -resize 1024x1024 myapp/assets/icon/icon.png
 
@@ -232,4 +232,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web2apk-release
-          path: myapp/build/app/outputs/flutter-apk/app-release.apk`;
+          path: myapp/build/app/outputs/flutter-apk/app-release.apk
