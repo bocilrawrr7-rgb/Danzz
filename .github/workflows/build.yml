@@ -1,4 +1,4 @@
-`name: Build Flutter APK
+name: Build Flutter APK
 
 on:
   workflow_dispatch:
@@ -34,14 +34,14 @@ jobs:
       - name: Download ZIP project
         run: |
           echo "=== Downloading ZIP ==="
-          echo "URL: \${{ github.event.inputs.zip_url }}"
+          echo "URL: ${{ github.event.inputs.zip_url }}"
 
-          curl -L \\
-            -H "Authorization: Bearer \${{ secrets.GH_TOKEN }}" \\
-            -H "Accept: application/octet-stream" \\
-            "\${{ github.event.inputs.zip_url }}" \\
-            -o project.zip \\
-            -w "\\n=== HTTP Status: %{http_code} ===\\n=== Final URL: %{url_effective} ===\\n"
+          curl -L \
+            -H "Authorization: Bearer ${{ secrets.GH_TOKEN }}" \
+            -H "Accept: application/octet-stream" \
+            "${{ github.event.inputs.zip_url }}" \
+            -o project.zip \
+            -w "\n=== HTTP Status: %{http_code} ===\n=== Final URL: %{url_effective} ===\n"
 
           echo ""
           echo "=== File Info ==="
@@ -71,15 +71,15 @@ jobs:
 
           echo ""
           echo "=== Mengunci Project Dir ==="
-          SUB_DIR_COUNT=\$(find project_raw -maxdepth 1 -mindepth 1 -type d | wc -l)
-          FILE_COUNT=\$(find project_raw -maxdepth 1 -mindepth 1 -type f | wc -l)
+          SUB_DIR_COUNT=$(find project_raw -maxdepth 1 -mindepth 1 -type d | wc -l)
+          FILE_COUNT=$(find project_raw -maxdepth 1 -mindepth 1 -type f | wc -l)
           
-          if [ "\$SUB_DIR_COUNT" -eq 1 ] && [ "\$FILE_COUNT" -eq 0 ]; then
-            PROJECT_DIR=\$(find project_raw -maxdepth 1 -mindepth 1 -type d | head -n 1)
+          if [ "$SUB_DIR_COUNT" -eq 1 ] && [ "$FILE_COUNT" -eq 0 ]; then
+            PROJECT_DIR=$(find project_raw -maxdepth 1 -mindepth 1 -type d | head -n 1)
           else
             PROJECT_DIR="project_raw"
           fi
-          echo "PROJECT_DIR=\$PROJECT_DIR" >> \$GITHUB_ENV
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -95,7 +95,7 @@ jobs:
           cache: true
 
       - name: Analyze Project Code
-        working-directory: \${{ env.PROJECT_DIR }}
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           if [ -f "pubspec.yaml" ]; then
             flutter analyze > analyze_report.txt 2>&1 || true
@@ -110,26 +110,26 @@ jobs:
           fi
 
       - name: Stop if Analyze Only
-        if: \${{ github.event.inputs.only_analyze == 'true' }}
+        if: ${{ github.event.inputs.only_analyze == 'true' }}
         run: exit 1
 
       - name: Get dependencies
-        working-directory: \${{ env.PROJECT_DIR }}
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           if [ -f "pubspec.yaml" ]; then
             timeout 120s flutter pub get || echo "⚠️ Lanjut..."
           fi
 
       - name: Build APK
-        working-directory: \${{ env.PROJECT_DIR }}
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           if [ -f "pubspec.yaml" ]; then
-            flutter build apk --\${{ github.event.inputs.build_type }}
+            flutter build apk --${{ github.event.inputs.build_type }}
           else
-            GRADLE_PATH=\$(find . -name "gradlew" | head -n 1)
-            GRADLE_DIR=\$(dirname "\$GRADLE_PATH")
-            cd "\$GRADLE_DIR" && chmod +x gradlew
-            if [ "\${{ github.event.inputs.build_type }}" = "debug" ]; then
+            GRADLE_PATH=$(find . -name "gradlew" | head -n 1)
+            GRADLE_DIR=$(dirname "$GRADLE_PATH")
+            cd "$GRADLE_DIR" && chmod +x gradlew
+            if [ "${{ github.event.inputs.build_type }}" = "debug" ]; then
               ./gradlew assembleDebug
             else
               ./gradlew assembleRelease
@@ -138,15 +138,15 @@ jobs:
 
       - name: Check APK Output
         run: |
-          APK_FOUND=\$(find \$GITHUB_WORKSPACE -name "*.apk" | head -n 1)
-          APK_PATH=\$(echo "\$APK_FOUND" | sed "s|\$GITHUB_WORKSPACE/||")
-          echo "PROJECT_DIR=\$GITHUB_WORKSPACE" >> \$GITHUB_ENV
-          echo "APK_PATH=\$APK_PATH" >> \$GITHUB_ENV
+          APK_FOUND=$(find $GITHUB_WORKSPACE -name "*.apk" | head -n 1)
+          APK_PATH=$(echo "$APK_FOUND" | sed "s|$GITHUB_WORKSPACE/||")
+          echo "PROJECT_DIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-\${{ github.event.inputs.build_type }}-\${{ github.event.inputs.tag }}
-          path: \${{ env.PROJECT_DIR }}/\${{ env.APK_PATH }}
+          name: flutter-${{ github.event.inputs.build_type }}-${{ github.event.inputs.tag }}
+          path: ${{ env.PROJECT_DIR }}/${{ env.APK_PATH }}
           retention-days: 1
-          if-no-files-found: error`;
+          if-no-files-found: error
